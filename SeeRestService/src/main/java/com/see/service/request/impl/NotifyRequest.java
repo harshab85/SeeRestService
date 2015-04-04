@@ -4,12 +4,7 @@ import com.see.service.request.intf.BaseRequest;
 
 public class NotifyRequest extends BaseRequest {
 
-	private String videoURL;
 	private String channelName;
-	
-	public String getVideoUrl(){
-		return this.videoURL;
-	}
 	
 	public String getChannelName(){
 		return this.channelName;

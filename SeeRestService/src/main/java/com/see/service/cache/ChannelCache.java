@@ -1,163 +1,182 @@
 package com.see.service.cache;
 
+import java.io.InputStream;
+import java.io.StringWriter;
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.HashMap;
-import java.util.Iterator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
-public final class ChannelCache {
+import org.apache.commons.io.IOUtils;
+import org.apache.http.Header;
+import org.apache.http.HeaderElement;
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpHeaders;
+import org.apache.http.ParseException;
+import org.apache.http.client.methods.CloseableHttpResponse;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.CloseableHttpClient;
+import org.apache.http.impl.client.HttpClientBuilder;
 
-	
-	private static ChannelCache INSTANCE = new ChannelCache();
-	
+import com.see.service.util.Util;
+
+public class ChannelCache {
+
 	/*
-	 * Key - user id
-	 * Value - channel name
+	 * Singleton pattern
 	 */
-	private static Map<String, String> channelCache = new HashMap<String, String>();
+	private static final ChannelCache INSTANCE = new ChannelCache();
 	
-	/*
-	 * Key - channel name
-	 * Value - list of subscribed user ids
-	 */
-	private static Map<String, List<String>> subscribedUsersCache = new HashMap<String, List<String>>();
-	
-	/*
-	 * key - channel name
-	 * value - video url list
-	 */
-	private static Map<String, List<Video>> videoCache = new HashMap<String, List<Video>>();
-	
-	
-	private ChannelCache(){		
+	private ChannelCache(){
+		
 	}
 	
 	public static ChannelCache getInstance(){
 		return INSTANCE;
 	}
 	
-	public void register(String userId) throws Exception{		
-		if(channelCache.containsKey(userId)){
-			throw new Exception("The user id already exists");
-		}
+	
+	/*
+	 * Cache
+	 * key - channel name
+	 * value - list of subscribers
+	 */	
+	private static Map<String, Set<String>> CACHE = new HashMap<String, Set<String>>();
 		
-		channelCache.put(userId, null);		
+	
+	/*
+	 * Delete all
+	 */
+	public void clear(){
+		CACHE.clear();
 	}
 	
-	public void createChannel(String userId, String channelName) throws Exception{		
-		
-		String cachedChannelName = channelCache.get(userId);		
-		if(cachedChannelName != null){
-			throw new Exception("The user id already has a channel. Name: " + cachedChannelName);
+	/*
+	 * Create channel
+	 */
+	public void createChannel(String channelName) throws Exception{
+		if(CACHE.containsKey(channelName)){
+			throw new Exception("The channel name already exists");
 		}
 		else{
-			channelCache.put(userId, channelName);
+			if(createRemoteChannel(channelName)){			
+				CACHE.put(channelName, new HashSet<String>());
+			}
+			else{
+				throw new Exception("Remote channel creation failed");
+			}
+			
+			
 		}
 	}
 	
-	public void subscribe(String userId, List<String> subscribedChannels){	
+	class CreateRemoteChannelHeader implements Header{
+
+		@Override
+		public String getName() {			
+			return HttpHeaders.CONTENT_TYPE;
+		}
+
+		@Override
+		public String getValue() {
+			return "application/json";
+		}
+
+		@Override
+		public HeaderElement[] getElements() throws ParseException {
+			return new HeaderElement[0];
+		}
 		
-		Iterator<String> iter = subscribedChannels.iterator();
-		while(iter.hasNext()){
-			String channelName = iter.next();
-			List<String> subscribedUsers = subscribedUsersCache.get(channelName);
-			if(subscribedUsers == null){
-				subscribedUsers = new ArrayList<String>();
-				subscribedUsers.add(userId);
-				subscribedUsersCache.put(channelName, subscribedUsers);
-			}
-			else{
-				int index = subscribedUsers.indexOf(userId);
-				if(index < 0){
-					subscribedUsers.add(userId);
-					subscribedUsersCache.put(channelName, subscribedUsers);
-				}
-			}						
-		}	
 	}
 	
-	public List<String> getChannels(){
-		Collection<String> channels = channelCache.values();
-		List<String> channelsList = new ArrayList<String>(channels);
+	private boolean createRemoteChannel(String channelName) throws Exception{
+		
+		CloseableHttpClient client = null;
+		CloseableHttpResponse response = null;
+		InputStream inputStream = null;		
+		
+		List<Header> headers = new ArrayList<Header>(1);
+		Header header = new CreateRemoteChannelHeader();
+		headers.add(header);
+		
+		try {
+			HttpGet request = new HttpGet(Util.CREATE_REMOTE_CHANNEL_URL + channelName);			
+			client = HttpClientBuilder.create().setDefaultHeaders(headers).build();			
+			response = client.execute(request);
+			
+			HttpEntity entity = response.getEntity();
+			if(entity != null){
+				inputStream = entity.getContent();
+				if(inputStream != null){
+					StringWriter writer = new StringWriter();
+					IOUtils.copy(inputStream, writer);
+					String responseString = writer.toString();
+					if(responseString == null || responseString.isEmpty() || !responseString.trim().equals("1")){
+						return false;
+					}
+					else{
+						return true;
+					}
+				}
+			}								
+		} 
+		catch (Exception e) {
+			throw new Exception("Remote channel creation failed");
+		} 	
+		finally{
+			try{				
+				if(inputStream != null){
+					inputStream.close();
+				}
+				if(response != null){
+					response.close();
+				}
+				if(client != null){
+					client.close();
+				}
+			}
+			catch(Exception e){
+				// Ignore
+			}
+		}
+		
+		return true;
+	}
+		
+	/*
+	 * Subscribe
+	 */
+	public void subscribe(String requestorChannelName, String newSubscription) throws Exception{
+		
+		if(!CACHE.containsKey(requestorChannelName)){
+			throw new Exception("The requestor channel does not exist : " + requestorChannelName);
+		}
+		
+		if(!CACHE.containsKey(newSubscription)){
+			throw new Exception("The subscribed channel does not exist : " + newSubscription);
+		}
+		
+		Set<String> cachedSubscriptions = CACHE.get(requestorChannelName);
+		cachedSubscriptions.add(newSubscription);
+		CACHE.put(requestorChannelName, cachedSubscriptions);				
+	}
+	
+	/*
+	 * Get channels
+	 */
+	public Set<String> getChannels(){
+		Set<String> cachedChannels = CACHE.keySet();
+		Set<String> channelsList = new HashSet<String>(cachedChannels);		
 		return channelsList;
 	}
 	
-	public void putVideo(String userId, String ownerChannelName, String videoUrl, long timeStamp) throws Exception{
-		if(!channelCache.containsKey(userId)){
-			throw new Exception("The user id " + userId + " is not found");
-		}
-		
-		String cachedChannelName = channelCache.get(userId);
-		if(!cachedChannelName.equals(ownerChannelName)){
-			throw new Exception("The channel name " + ownerChannelName + " is not registered for this user " + userId);
-		}
-				
-		List<String> subscribedUsers = subscribedUsersCache.get(ownerChannelName);
-		Iterator<String> iter = subscribedUsers.iterator();
-		while(iter.hasNext()){
-			String user = iter.next();
-			List<Video> videos = videoCache.get(user);
-			if(videos == null){
-				videos = new ArrayList<ChannelCache.Video>();
-				Video video = new Video();
-				video.videoUrl = videoUrl;
-				video.timeStamp = timeStamp;
-				videos.add(video);
-				videoCache.put(user, videos);
-			}
-			else{
-				Video video = new Video();
-				video.videoUrl = videoUrl;
-				video.timeStamp = timeStamp;
-				videos.add(video);
-				videoCache.put(user, videos);
-			}			
-		}
-	}	
-	
-	public String getVideo(String userId){		
-		List<Video> videos = videoCache.get(userId);
-		if(videos != null && !videos.isEmpty()){
-			Video video = videos.get(0);
-			return video.getVideoUrl();
-		}
-		
-		return null;
-	}
-	
-	public void deleteVideo(String userId, String ownerChannelName, String videoUrl) throws Exception{		
-		if(!channelCache.containsKey(userId)){
-			throw new Exception("The user id " + userId + " is not found");
-		}
-		
-		String cachedChannelName = channelCache.get(userId);
-		if(!cachedChannelName.equals(ownerChannelName)){
-			throw new Exception("The channel name " + ownerChannelName + " is not registered for this user " + userId);
-		}
-				
-		List<String> subscribedUsers = subscribedUsersCache.get(ownerChannelName);
-		Iterator<String> iter = subscribedUsers.iterator();
-		while(iter.hasNext()){
-			String user = iter.next();
-			List<Video> videos = videoCache.get(user);
-			if(videos != null){
-				videos.remove(videoUrl);
-			}
-		}
-	}
-	
-	class Video{
-		private String videoUrl;
-		private long timeStamp;
-		
-		public String getVideoUrl() {
-			return videoUrl;
-		}
-		public long getTimeStamp() {
-			return timeStamp;
-		}
-				
+	/*
+	 * Get subscriptions
+	 */
+	public Set<String> getSubscriptions(String channelName){
+		Set<String> subscriptions = new HashSet<String>(CACHE.get(channelName));
+		return subscriptions;
 	}
 }

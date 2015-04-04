@@ -4,7 +4,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 
-import com.see.service.cache.NewCache;
+import com.see.service.cache.ChannelCache;
 import com.see.service.util.Util;
 
 public class NotificationHandler {
@@ -23,9 +23,13 @@ public class NotificationHandler {
 	
 	private static Set<String> streamCache = new HashSet<String>();
 	
+	public void clear(){
+		streamCache.clear();
+	}
+	
 	public void addStream(String channelName) throws Exception{
 		
-		Set<String> allChannels = NewCache.getInstance().getChannels();
+		Set<String> allChannels = ChannelCache.getInstance().getChannels();
 		if(!allChannels.contains(channelName)){
 			throw new Exception("The channel name " + channelName + " does not exist");
 		}
@@ -42,7 +46,7 @@ public class NotificationHandler {
 	}
 	
 	public String getStreamUrl(String channelName){		
-		Set<String> subscriptions = NewCache.getInstance().getSubscriptions(channelName);
+		Set<String> subscriptions = ChannelCache.getInstance().getSubscriptions(channelName);
 		if(subscriptions != null && !subscriptions.isEmpty()){			
 			subscriptions.retainAll(streamCache);			
 			if(subscriptions != null && !subscriptions.isEmpty()){
