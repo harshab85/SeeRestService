@@ -8,11 +8,11 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.see.service.config.ChannelCache;
+import com.see.service.cache.ChannelCache;
 import com.see.service.request.impl.CreateChannelRequest;
 import com.see.service.request.impl.DeleteVideoRequest;
 import com.see.service.request.impl.PollRequest;
-import com.see.service.request.impl.PutVideoRequest;
+import com.see.service.request.impl.NotifyRequest;
 import com.see.service.request.impl.RegisterUserRequest;
 import com.see.service.request.impl.SubscribeRequest;
 import com.see.service.response.impl.CreateChannelResponse;
@@ -20,14 +20,14 @@ import com.see.service.response.impl.DeleteVideoResponse;
 import com.see.service.response.impl.GetChannelsResponse;
 import com.see.service.response.impl.GetStatusResponse;
 import com.see.service.response.impl.PollResponse;
-import com.see.service.response.impl.PutVideoResponse;
+import com.see.service.response.impl.NotifyResponse;
 import com.see.service.response.impl.RegisterUserResponse;
 import com.see.service.response.impl.SubscribeResponse;
 import com.see.service.response.intf.IResponse;
 
 
-@RestController
-@RequestMapping("/see")
+//@RestController
+//@RequestMapping("/see")
 public class ServiceController {
 
 	@RequestMapping(value = "/getStatus", method = RequestMethod.GET, produces = MediaType.APPLICATION_JSON_VALUE)
@@ -111,7 +111,7 @@ public class ServiceController {
 		}
 		else{
 			String userId = subscribeRequest.getUserId();
-			List<String> subscribedChannels = subscribeRequest.getChannelNames();
+			List<String> subscribedChannels = subscribeRequest.getSubscriptions();
 			
 			if(userId == null || userId.isEmpty()){
 				response = new SubscribeResponse(false, "The user id is not available.");
@@ -137,29 +137,29 @@ public class ServiceController {
 		return response;
 	}
 	
-	@RequestMapping(value = "/putVideo", method = RequestMethod.PUT, produces = MediaType.APPLICATION_JSON_VALUE)
-	public IResponse putVideo(@RequestBody PutVideoRequest putVideoRequest){
+	@RequestMapping(value = "/notify", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)
+	public IResponse putVideo(@RequestBody NotifyRequest notifyRequest){
 		
 		IResponse response = null;
 		
-		if(putVideoRequest == null){
-			response = new PutVideoResponse(false, "The request is not available.");
+		if(notifyRequest == null){
+			response = new NotifyResponse(false, "The request is unavailable.");
 		}
 		else{
-			String channelName = putVideoRequest.getChannelName();
-			String userId = putVideoRequest.getUserId();
-			String videoUrl = putVideoRequest.getVideoUrl();
-			long timeStamp = putVideoRequest.getTimeStamp();
+			String channelName = notifyRequest.getChannelName();
+			//String userId = notifyRequest.getUserId();
+			//String videoUrl = notifyRequest.getVideoUrl();
+			long timeStamp = notifyRequest.getTimeStamp();
 			
-			if(userId == null || userId.isEmpty()){
-				response = new PutVideoResponse(false, "The user id is not available.");
+			/*if(userId == null || userId.isEmpty()){
+				response = new NotifyResponse(false, "The user id is not available.");
 			}
-			else if(channelName == null || channelName.isEmpty()){
-				response = new PutVideoResponse(false, "The channel id is not available.");
+			else*/ if(channelName == null || channelName.isEmpty()){
+				response = new NotifyResponse(false, "The channel name is not available.");
 			} 
-			else if(videoUrl == null || videoUrl.isEmpty()){
-				response = new PutVideoResponse(false, "The video url is not available.");
-			} 
+			/*else if(videoUrl == null || videoUrl.isEmpty()){
+				response = new NotifyResponse(false, "The video url is not available.");
+			}*/ 
 			else{
 				
 				if(timeStamp == 0){
@@ -167,14 +167,14 @@ public class ServiceController {
 				}
 				
 				channelName = channelName.trim();
-				userId = userId.trim();
+				//userId = userId.trim();
 				
 				try {
-					ChannelCache.getInstance().putVideo(userId, channelName, videoUrl, timeStamp);
-					response = new PutVideoResponse(true, null);
+					//ChannelCache.getInstance().putVideo(userId, channelName, videoUrl, timeStamp);
+					response = new NotifyResponse(true, null);
 				} 
 				catch (Exception e) {
-					response = new PutVideoResponse(false, "Put Video Failed!");
+					response = new NotifyResponse(false, "Put Video Failed!");
 				}								
 			}			
 		}
