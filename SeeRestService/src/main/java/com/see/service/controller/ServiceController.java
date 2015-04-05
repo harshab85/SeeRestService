@@ -13,6 +13,7 @@ import com.see.service.cache.ChannelCache;
 import com.see.service.notifcation.NotificationHandler;
 import com.see.service.request.impl.CreateChannelRequest;
 import com.see.service.request.impl.NotifyRequest;
+import com.see.service.request.impl.ResetStreamHostRequest;
 import com.see.service.request.impl.SubscribeRequest;
 import com.see.service.request.impl.PollRequest;
 import com.see.service.response.impl.CreateChannelResponse;
@@ -22,8 +23,10 @@ import com.see.service.response.impl.GetChannelsResponse;
 import com.see.service.response.impl.NotifyResponse;
 import com.see.service.response.impl.PollResponse;
 import com.see.service.response.impl.RemoveStreamResponse;
+import com.see.service.response.impl.RestStreamHostResponse;
 import com.see.service.response.impl.SubscribeResponse;
 import com.see.service.response.intf.IResponse;
+import com.see.service.util.Util;
 
 
 @RestController
@@ -195,6 +198,13 @@ public class ServiceController {
 		return response;
 	}
 	
-	
+	@RequestMapping(value = "/resetStreamHost", method = RequestMethod.POST, produces = MediaType.APPLICATION_JSON_VALUE)	
+	public IResponse resetStreamHost(@RequestBody ResetStreamHostRequest resetStreamHost){
+		
+		String newHost = resetStreamHost.getNewHost();
+		Util.reset(newHost);
+		
+		return new RestStreamHostResponse();		
+	}
 	
 }
