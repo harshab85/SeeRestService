@@ -69,6 +69,6 @@ public class NotificationHandler {
 	}
 	
 	private String createStreamUrl(String channelName){
-		return Util.PLAY_REMOTE_STREAM_URL + channelName;
+		return Util.PLAY_REMOTE_STREAM_URL + channelName + Util.STREAM_NAME;
 	}
 }

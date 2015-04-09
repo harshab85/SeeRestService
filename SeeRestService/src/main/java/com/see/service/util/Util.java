@@ -6,7 +6,9 @@ public final class Util {
 	
 	public static String CREATE_REMOTE_CHANNEL_URL = "http://" + HOST + ":8080/RestfulWowzaApi/rest/create/";
 	
-	public static String PLAY_REMOTE_STREAM_URL = "rtsp://" + HOST + ":1935/live/";
+	public static String PLAY_REMOTE_STREAM_URL = "rtsp://" + HOST + ":1935/";
+	
+	public static String STREAM_NAME = "/myStream";
 	
 	public static void reset(String host){
 		HOST = host;
