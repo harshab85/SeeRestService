@@ -6,6 +6,14 @@ public class PollResponse extends AbstractResponse {
 
 	private String videoUrl;
 	
+	public PollResponse() {
+		super(true, null);		
+	}
+	
+	public PollResponse(String videoUrl) {
+		super(true, null);
+		this.videoUrl = videoUrl;
+	}
 	
 	public PollResponse(boolean success, String errorMessage, String videoUrl) {
 		super(success, errorMessage);
