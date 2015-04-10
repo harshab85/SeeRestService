@@ -4,10 +4,10 @@ import com.see.service.response.intf.AbstractResponse;
 
 public class PollResponse extends AbstractResponse {
 
-	private String videoUrl;
+	private String videoUrl = null;
 	
 	public PollResponse() {
-		super(true, null);		
+		super(false, null);		
 	}
 	
 	public PollResponse(String videoUrl) {

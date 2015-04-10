@@ -44,7 +44,13 @@ public class ChannelCache {
 	 * value - list of subscribers
 	 */	
 	private static Map<String, Set<String>> CACHE = new HashMap<String, Set<String>>();
+	
+	private static Map<String, Set<String>> NEWCACHE = new HashMap<String, Set<String>>();
 		
+	
+	public Set<String> getRegistrationIds(String channelName){
+		return NEWCACHE.get(channelName);
+	}
 	
 	/*
 	 * Delete all
@@ -56,13 +62,14 @@ public class ChannelCache {
 	/*
 	 * Create channel
 	 */
-	public void createChannel(String channelName) throws Exception{
+	public void createChannel(String channelName, String registrationId) throws Exception{
 		if(CACHE.containsKey(channelName)){
 			throw new Exception("The channel name already exists");
 		}
 		else{
 			if(createRemoteChannel(channelName)){			
 				CACHE.put(channelName, new HashSet<String>());
+				NEWCACHE.put(registrationId, new HashSet<String>());
 			}
 			else{
 				throw new Exception("Remote channel creation failed");
@@ -148,19 +155,24 @@ public class ChannelCache {
 	/*
 	 * Subscribe
 	 */
-	public void subscribe(String requestorChannelName, String newSubscription) throws Exception{
+	public void subscribe(String registrationId, String newSubscription) throws Exception{
 		
-		if(!CACHE.containsKey(requestorChannelName)){
-			throw new Exception("The requestor channel does not exist : " + requestorChannelName);
+		/*if(!CACHE.containsKey(registrationId)){
+			throw new Exception("The requestor channel does not exist : " + registrationId);
 		}
 		
 		if(!CACHE.containsKey(newSubscription)){
 			throw new Exception("The subscribed channel does not exist : " + newSubscription);
 		}
 		
-		Set<String> cachedSubscriptions = CACHE.get(requestorChannelName);
+		Set<String> cachedSubscriptions = CACHE.get(registrationId);
 		cachedSubscriptions.add(newSubscription);
-		CACHE.put(requestorChannelName, cachedSubscriptions);				
+		CACHE.put(registrationId, cachedSubscriptions);*/			
+		
+		//cachedSubscriptions.clear();
+		Set<String> cachedSubscriptions = NEWCACHE.get(registrationId);
+		cachedSubscriptions.add(registrationId);
+		NEWCACHE.put(newSubscription, cachedSubscriptions);
 	}
 	
 	/*
@@ -176,7 +188,7 @@ public class ChannelCache {
 	 * Get subscriptions
 	 */
 	public Set<String> getSubscriptions(String channelName){
-		Set<String> subscriptions = new HashSet<String>(CACHE.get(channelName));
+		Set<String> subscriptions = new HashSet<String>(NEWCACHE.get(channelName));
 		return subscriptions;
 	}
 }

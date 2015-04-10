@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.see.service.cache.ChannelCache;
+import com.see.service.gcm.GCM;
 import com.see.service.notifcation.NotificationHandler;
 import com.see.service.request.impl.CreateChannelRequest;
 import com.see.service.request.impl.NotifyRequest;
@@ -48,13 +49,17 @@ public class ServiceController {
 		}
 		else{
 			String channelName = createChannelRequest.getChannelName();
+			String registrationId = createChannelRequest.getRegistrationId();
 			if(channelName == null || channelName.trim().isEmpty()){
 				response = new CreateChannelResponse(false, "The channel name is unavailable.");
+			}
+			else if(registrationId == null || registrationId.isEmpty()){
+				response = new CreateChannelResponse(false, "The registration id is unavailable.");
 			}
 			else{
 				try {
 					channelName = channelName.trim();
-					ChannelCache.getInstance().createChannel(channelName);
+					ChannelCache.getInstance().createChannel(channelName, registrationId);
 					response = new CreateChannelResponse(true, null);
 				} 
 				catch (Exception e) {
@@ -76,18 +81,18 @@ public class ServiceController {
 			response = new SubscribeResponse(false, "The request unavailable.");
 		}
 		else{
-			String requestorChannelName = subscribeRequest.getRequestorChannelName();
+			String registrationId = subscribeRequest.getRegistrationId();
 			String newSubscription = subscribeRequest.getNewSubscription();
 			
-			if(requestorChannelName == null || requestorChannelName.isEmpty()){
-				response = new SubscribeResponse(false, "The requestor channel name is unavailable.");
+			if(registrationId == null || registrationId.isEmpty()){
+				response = new SubscribeResponse(false, "The registration id is unavailable.");
 			}
 			else if(newSubscription == null || newSubscription.isEmpty()){
 				response = new SubscribeResponse(false, "Subscribed channel is unavailable.");
 			}
 			else{
 				try {
-					ChannelCache.getInstance().subscribe(requestorChannelName, newSubscription);
+					ChannelCache.getInstance().subscribe(registrationId, newSubscription);
 					response = new SubscribeResponse(true, null);
 				} 
 				catch (Exception e) {
@@ -131,6 +136,10 @@ public class ServiceController {
 				try {		
 					synchronized (NotificationHandler.lock) {
 						NotificationHandler.getInstance().addStream(channelName);
+						Set<String> registrationIds = ChannelCache.getInstance().getRegistrationIds(channelName);
+						
+						String url = NotificationHandler.getInstance().createStreamUrl(channelName);
+						GCM.getInstance().notifySubscribers(registrationIds, url);
 					}
 					response = new NotifyResponse(true, null);
 				} 
